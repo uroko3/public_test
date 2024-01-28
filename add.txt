@@ -1,8 +1,0 @@
-<html>
-<head>
-<title>うんこ</title>
-</head>
-<body>
-やったりました
-</body>
-</html>

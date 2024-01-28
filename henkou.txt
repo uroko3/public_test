@@ -1,8 +1,0 @@
-<html>
-<head>
-<title>変更</title>
-</head>
-<body>
-変更
-</body>
-</html>
