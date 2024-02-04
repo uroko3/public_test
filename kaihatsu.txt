@@ -1,8 +1,8 @@
 <html>
 <head>
-<title>テスト</title>
+<title>テスト2</title>
 </head>
 <body>
-ボデー
+ボデー2
 </body>
 </html>
