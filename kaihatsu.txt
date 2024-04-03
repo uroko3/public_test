@@ -1,8 +1,0 @@
-<html>
-<head>
-<title>テスト3</title>
-</head>
-<body>
-ボデー3
-</body>
-</html>
