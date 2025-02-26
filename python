@@ -1,3 +1,21 @@
+project/
+│
+├── db_config.py         # DB接続情報
+├── mysql_database.py    # MySQLDatabaseクラス
+└── main.py              # 呼び出し側のコード
+
+# db_config.py
+
+db_config = {
+    'host': 'localhost',      # データベースのホスト
+    'user': 'your_user',      # ユーザー名
+    'password': 'your_password',  # パスワード
+    'database': 'your_database',  # データベース名
+    'charset': 'utf8mb4'      # 文字コード
+}
+
+# mysql_database.py
+
 import pymysql
 
 class MySQLDatabase:
@@ -102,9 +120,10 @@ class MySQLDatabase:
 
 
 
+# main.py
 
-
-
+from db_config import db_config
+from mysql_database import MySQLDatabase
 
 db = MySQLDatabase(db_config)
 
