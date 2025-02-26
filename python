@@ -1,0 +1,130 @@
+import pymysql
+
+class MySQLDatabase:
+    def __init__(self, db_config):
+        """初期化：接続情報を受け取る"""
+        self.db_config = db_config
+        self.conn = None
+        self.cursor = None
+
+    def connect(self):
+        """データベースに接続"""
+        try:
+            self.conn = pymysql.connect(**self.db_config)
+            self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+        except pymysql.MySQLError as err:
+            print(f"接続エラー: {err}")
+            self.conn = None
+            raise  # 接続エラーは呼び出し元に再投げ
+
+    def close(self):
+        """接続とカーソルを閉じる"""
+        if self.cursor:
+            try:
+                self.cursor.close()
+            except pymysql.MySQLError as err:
+                print(f"カーソルのクローズエラー: {err}")
+                raise  # カーソルのクローズエラーも呼び出し元に再投げ
+        if self.conn and self.conn.open:
+            try:
+                self.conn.close()
+            except pymysql.MySQLError as err:
+                print(f"接続のクローズエラー: {err}")
+                raise  # 接続のクローズエラーも呼び出し元に再投げ
+
+    def execute_query(self, query, params=None, commit=False):
+        """SQL を実行して結果を返す（トランザクション対応、影響行数取得）"""
+        if not self.conn or not self.cursor:
+            print("接続が確立されていません。connect() を呼び出してください。")
+            raise Exception("データベース接続が確立されていません")  # 接続がない場合のエラーを再投げ
+
+        try:
+            self.cursor.execute(query, params or ())
+
+            # SELECT クエリの場合、結果を返す
+            if query.strip().upper().startswith("SELECT"):
+                return self.cursor.fetchall()
+
+            # 影響を受けた行数を取得
+            affected_rows = self.cursor.rowcount
+
+            # トランザクションの場合は、commit() を行う
+            if commit:
+                try:
+                    self.conn.commit()
+                except pymysql.MySQLError as err:
+                    print(f"コミットエラー: {err}")
+                    self.conn.rollback()
+                    raise  # コミット失敗を呼び出し元に再投げ
+
+            return {"message": "クエリ実行成功", "affected_rows": affected_rows}
+
+        except pymysql.MySQLError as err:
+            print(f"クエリエラー: {err}")
+            try:
+                self.conn.rollback()  # エラーがあればロールバック
+            except pymysql.MySQLError as rollback_err:
+                print(f"ロールバックエラー: {rollback_err}")
+                raise  # ロールバック失敗を呼び出し元に再投げ
+            raise  # クエリエラーも呼び出し元に再投げ
+
+    def start_transaction(self):
+        """トランザクション開始"""
+        if self.conn:
+            try:
+                self.conn.begin()
+            except pymysql.MySQLError as err:
+                print(f"トランザクション開始エラー: {err}")
+                raise  # トランザクション開始失敗を呼び出し元に再投げ
+
+    def commit_transaction(self):
+        """トランザクションをコミット"""
+        if self.conn:
+            try:
+                self.conn.commit()
+            except pymysql.MySQLError as err:
+                print(f"トランザクションコミットエラー: {err}")
+                self.conn.rollback()
+                raise  # コミット失敗を呼び出し元に再投げ
+
+    def rollback_transaction(self):
+        """トランザクションをロールバック"""
+        if self.conn:
+            try:
+                self.conn.rollback()
+            except pymysql.MySQLError as err:
+                print(f"トランザクションロールバックエラー: {err}")
+                raise  # ロールバック失敗を呼び出し元に再投げ
+
+    def close_connection(self):
+        """最終的に接続を閉じる"""
+        self.close()
+
+
+
+
+
+
+
+db = MySQLDatabase(db_config)
+
+try:
+    db.connect()
+    db.start_transaction()
+
+    # いくつかのクエリを実行
+    query1 = "SELECT * FROM users WHERE age > %s;"
+    result1 = db.execute_query(query1, (20,))
+    print(result1)
+
+    query2 = "UPDATE users SET age = %s WHERE name = %s;"
+    db.execute_query(query2, (28, 'John'), commit=True)
+
+    db.commit_transaction()  # トランザクションをコミット
+
+except Exception as e:
+    print(f"エラーが発生しました: {e}")
+    db.rollback_transaction()  # ロールバック
+
+finally:
+    db.close_connection()  # 最後に接続を閉じる
