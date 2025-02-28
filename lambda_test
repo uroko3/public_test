@@ -1,0 +1,60 @@
+import json
+import pymysql
+
+def lambda_handler(event, context):
+    # AWS RDS MySQLの接続情報
+    db_host = ""  # RDSインスタンスのエンドポイント
+    db_user = ""  # RDS MySQLのユーザー名
+    db_password = ""  # RDS MySQLのパスワード
+    db_name = ""  # 作成または操作するデータベース名
+    
+    try:
+        # MySQL接続（RDS MySQLに接続）
+        connection = pymysql.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        
+        with connection.cursor() as cursor:
+            # データベースが存在しない場合に作成
+            create_database_query = '''
+            CREATE DATABASE IF NOT EXISTS test
+            CHARACTER SET utf8mb4
+            COLLATE utf8mb4_unicode_ci
+            '''
+            cursor.execute(create_database_query)
+            connection.commit()
+            
+            # データベースに接続
+            connection.select_db(db_name)
+            
+            # テーブル作成
+            create_table_query = '''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100),
+                email VARCHAR(100),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            CHARACTER SET utf8mb4
+            COLLATE utf8mb4_unicode_ci
+            '''
+            cursor.execute(create_table_query)
+            connection.commit()
+            
+            return {
+                'statusCode': 200,
+                'body': json.dumps('Database and table created successfully')
+            }
+    
+    except Exception as e:
+        print(f"Error: {e}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps(f"Error: {str(e)}")
+        }
+    
+    finally:
+        connection.close()
