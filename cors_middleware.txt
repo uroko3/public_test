@@ -1,0 +1,96 @@
+▽app/Http/Middleware/CustomCors.php
+
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CustomCors
+{
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        // 許可するオリジンをエンドポイントごとに設定
+        $allowedOrigins = [
+            'api/hoge.json' => 'https://example.com',
+            'api/hoge2.json' => 'https://example2.com',
+            'api/hoge3.json' => 'https://example3.com',
+        ];
+
+        $path = $request->path(); // リクエストされたパス
+        $origin = $request->header('Origin'); // リクエストのオリジン
+
+        // 許可するオリジンがあるかチェック
+        $allowedOrigin = null;
+        foreach ($allowedOrigins as $route => $allowed) {
+            if ($path === $route) {
+                $allowedOrigin = $allowed;
+                break;
+            }
+        }
+
+        $response = $next($request);
+
+        // 許可されたオリジンの場合のみCORSヘッダーを設定
+        if ($allowedOrigin && $origin === $allowedOrigin) {
+            $response->headers->set('Access-Control-Allow-Origin', $allowedOrigin);
+            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+
+        return $response;
+    }
+}
+
+
+
+▽app/Http/Kernel.php
+protected $routeMiddleware = [
+    // 他のミドルウェア
+    'custom.cors' => \App\Http\Middleware\CustomCors::class,
+];
+
+
+
+▽routes.php
+Route::middleware('custom.cors')->group(function () {
+    Route::get('/hoge.json', function (Request $request) {
+        return response()->json(['message' => 'CORS for example.com']);
+    });
+
+    Route::get('/hoge2.json', function (Request $request) {
+        return response()->json(['message' => 'CORS for example2.com']);
+    });
+
+    Route::get('/hoge3.json', function (Request $request) {
+        return response()->json(['message' => 'CORS for example3.com']);
+    });
+});
+
+
+
+▼またはcors.php
+return [
+    'paths' => [
+        'api/hoge.json',
+        'api/hoge2.json',
+        'api/hoge3.json',
+    ],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    'allowed_origins' => [
+        'https://example.com',
+        'https://sub.example.com',
+        'https://another-domain.com',
+    ], // ここに複数のオリジンを指定
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['Content-Type', 'Authorization'],
+    'exposed_headers' => [],
+    'max_age' => 0,
+    'supports_credentials' => false,
+];
+

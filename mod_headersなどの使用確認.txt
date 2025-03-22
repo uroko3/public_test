@@ -1,0 +1,29 @@
+▼mod_headers,mod_setenvifが使えるかの確認方法
+sudo apachectl -M | grep -E 'headers|setenvif'
+sudo httpd -M | grep -E 'headers|setenvif'
+
+▼.htaccessの例（laravelのデフォルトに追加）
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
+
+    RewriteEngine On
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    # Handle Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# CORS 設定を追加
+<IfModule mod_headers.c>
+    SetEnvIfNoCase Origin "^https?://(www\.)?hoge\.com(:\d+)?$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https?://(www\.)?hoge1\.com(:\d+)?$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https?://(www\.)?hoge2\.com(:\d+)?$" AccessControlAllowOrigin=$0
+
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+</IfModule>

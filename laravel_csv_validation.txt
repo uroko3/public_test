@@ -1,0 +1,83 @@
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+
+class UploadCsvRequest extends FormRequest
+{
+    protected $parsedCsv = []; // CSVデータを保持する変数
+
+    public function rules(): array
+    {
+        return [
+            'csv_file' => 'required|file|mimes:csv,txt|max:2048', // CSVファイルの存在チェック
+            'radio_option' => 'required|in:option1,option2', // ラジオボタンのチェック（必須）
+        ];
+    }
+
+    // CSVファイルを解析する処理
+    protected function prepareForValidation()
+    {
+        $file = $this->file('csv_file');
+        
+        if ($file && $file->isValid()) {
+            // ファイルが有効なら、CSVを解析してデータを格納
+            $handle = fopen($file->getPathname(), 'r');
+            if ($handle) {
+                $header = fgetcsv($handle); // 1行目をヘッダーとする
+                $data = [];
+
+                while ($row = fgetcsv($handle)) {
+                    $data[] = array_combine($header, $row); // ヘッダーをキーにして配列化
+                }
+                fclose($handle);
+
+                // CSVデータをリクエストに追加（withValidatorで使うため）
+                $this->merge([
+                    'parsed_csv' => $data,
+                ]);
+
+                // クラス変数にも保存（withValidatorで使用するため）
+                $this->parsedCsv = $data;
+            }
+        }
+    }
+
+    public function withValidator(Validator $validator)
+    {
+        // ラジオボタンが選択されていない場合は、CSVチェックをスキップ
+        $validator->after(function ($validator) {
+            if ($this->has('radio_option')) {
+                $this->validateCsv($validator);
+            }
+        });
+    }
+
+    // CSVの本体のバリデーション
+    protected function validateCsv(Validator $validator)
+    {
+        $expectedColumns = ['id', 'name', 'email']; // 必須カラム
+        $minRows = 1; // 最低1行必要
+
+        $rows = $this->parsedCsv;
+
+        // 1. 行数チェック
+        if (count($rows) < $minRows) {
+            $this->addCsvError($validator, "CSVには最低{$minRows}行のデータが必要です。");
+            return;
+        }
+
+        // 2. 各行の必須列の値チェック
+        foreach ($rows as $index => $row) {
+            foreach ($expectedColumns as $column) {
+                if (empty($row[$column])) {
+                    $this->addCsvError($validator, "CSVの " . ($index + 2) . " 行目の '{$column}' が空です。");
+                }
+            }
+        }
+    }
+
+    // エラーメッセージを追加するメソッド
+    protected function addCsvError(Validator $validator, string $message)
+    {
+        $validator->errors()->add('csv_file', $message);
+    }
+}
