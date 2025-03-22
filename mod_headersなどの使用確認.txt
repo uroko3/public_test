@@ -97,18 +97,18 @@ sudo httpd -M | grep -E 'headers|setenvif'
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
 ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
-▽ファイル別オリジンを設定する場合
+★ファイル別オリジンを設定する場合
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # test.json にアクセスされた場合、hoge.com だけCORS許可
+    # test.json にアクセスされた場合、hoge.com と hoge1.com 両方にCORS許可
     RewriteCond %{REQUEST_URI} ^/test/test.json$ [NC]
-    RewriteCond %{HTTP:Origin} ^https://hoge\.com$ [NC]
+    RewriteCond %{HTTP:Origin} ^https://(hoge\.com|hoge1\.com)$ [NC]
     RewriteRule .* - [E=AccessControlAllowOrigin:%{HTTP:Origin}]
 
-    # test2.json にアクセスされた場合、hoge1.com だけCORS許可
+    # test2.json にアクセスされた場合、hoge2.com だけCORS許可
     RewriteCond %{REQUEST_URI} ^/test/test2.json$ [NC]
-    RewriteCond %{HTTP:Origin} ^https://hoge1\.com$ [NC]
+    RewriteCond %{HTTP:Origin} ^https://hoge2\.com$ [NC]
     RewriteRule .* - [E=AccessControlAllowOrigin:%{HTTP:Origin}]
 </IfModule>
 
