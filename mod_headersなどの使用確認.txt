@@ -21,9 +21,9 @@ sudo httpd -M | grep -E 'headers|setenvif'
 
 # CORS 設定を追加
 <IfModule mod_headers.c>
-    SetEnvIfNoCase Origin "^https?://(www\.)?hoge\.com(:\d+)?$" AccessControlAllowOrigin=$0
-    SetEnvIfNoCase Origin "^https?://(www\.)?hoge1\.com(:\d+)?$" AccessControlAllowOrigin=$0
-    SetEnvIfNoCase Origin "^https?://(www\.)?hoge2\.com(:\d+)?$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https?://hoge\.com$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https?://hoge1\.com$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https?://hoge2\.com$" AccessControlAllowOrigin=$0
 
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
