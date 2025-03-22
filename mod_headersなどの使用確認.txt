@@ -27,3 +27,61 @@ sudo httpd -M | grep -E 'headers|setenvif'
 
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
+
+▼mod_rewirte版
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
+
+    RewriteEngine On
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    # Handle Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# CORS 設定を追加
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Origin} ^https://hoge\.com$ [NC,OR]
+    RewriteCond %{HTTP:Origin} ^https://hoge1\.com$ [NC,OR]
+    RewriteCond %{HTTP:Origin} ^https://hoge2\.com$ [NC]
+    RewriteRule .* - [E=AccessControlAllowOrigin:%{HTTP:Origin}]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+</IfModule>
+
+▽もしくは以下のようにまとめてもよい
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
+
+    RewriteEngine On
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    # Handle Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+
+    # CORS 設定
+    RewriteCond %{HTTP:Origin} ^https://hoge\.com$ [NC,OR]
+    RewriteCond %{HTTP:Origin} ^https://hoge1\.com$ [NC,OR]
+    RewriteCond %{HTTP:Origin} ^https://hoge2\.com$ [NC]
+    RewriteRule .* - [E=AccessControlAllowOrigin:%{HTTP:Origin}]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+</IfModule>
