@@ -1,7 +1,8 @@
 ▼mod_headers,mod_setenvifが使えるかの確認方法
 sudo apachectl -M | grep -E 'headers|setenvif'
 sudo httpd -M | grep -E 'headers|setenvif'
-
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+▼mod_rewirte版
 ▼.htaccessの例（laravelのデフォルトに追加）
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
@@ -27,7 +28,19 @@ sudo httpd -M | grep -E 'headers|setenvif'
 
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+▼mod_rewirte版
+↑のCORS部分は、IfModuleで分けてもよい
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase Origin "^https://hoge\.com$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https://hoge1\.com$" AccessControlAllowOrigin=$0
+    SetEnvIfNoCase Origin "^https://hoge2\.com$" AccessControlAllowOrigin=$0
+</IfModule>
 
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+</IfModule>
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
 ▼mod_rewirte版
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
@@ -57,7 +70,8 @@ sudo httpd -M | grep -E 'headers|setenvif'
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
-
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+▼mod_rewirte版
 ▽もしくは以下のようにまとめてもよい
 
 <IfModule mod_rewrite.c>
