@@ -116,3 +116,5 @@ sudo httpd -M | grep -E 'headers|setenvif'
     # CORSヘッダーを追加
     Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
 </IfModule>
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+★Access-Control-Allow-Methods や Access-Control-Allow-Headers はプリフライト時に必要
