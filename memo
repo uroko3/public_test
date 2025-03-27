@@ -1,0 +1,7 @@
+$body = 'a';
+$parts = explode('/', $body); // ['a']
+$length = count($parts); // 1
+
+$result = collect($parts)
+    ->map(fn ($_, $index) => '--include="' . collect($parts)->slice(0, $index + 1)->implode('/') . ($index < $length - 1 ? '/' : '') . '"')
+    ->implode(' ');
