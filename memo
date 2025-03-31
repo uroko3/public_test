@@ -131,4 +131,33 @@ $result = collect($parts)
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- Bootstrap 3 の JavaScript -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>@section('modal')
+    <!-- モーダルのHTML -->
+    <div id="myModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">モーダルタイトル</h4>
+                </div>
+                <div class="modal-body">
+                    <p>ここにモーダルの内容が入ります。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダルを開くボタン -->
+    <button class="btn btn-primary" data-toggle="modal" data-target="#myModal">モーダルを開く</button>
+@endsection
+
+
+
+
+
+
+
+
