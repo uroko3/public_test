@@ -5,3 +5,28 @@ $length = count($parts); // 1
 $result = collect($parts)
     ->map(fn ($_, $index) => '--include="' . collect($parts)->slice(0, $index + 1)->implode('/') . ($index < $length - 1 ? '/' : '') . '"')
     ->implode(' ');
+
+
+
+<!-- ボタン（モーダルを開く） -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
+  モーダルを開く
+</button>
+
+<!-- モーダル本体 -->
+<div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="myModalLabel">モーダルタイトル</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body">
+        ここにモーダルの内容を書きます。
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
