@@ -1,192 +1,47 @@
-$body = 'a';
-$parts = explode('/', $body); // ['a']
-$length = count($parts); // 1
+namespace App\Http\Requests;
 
-$result = collect($parts)
-    ->map(fn ($_, $index) => '--include="' . collect($parts)->slice(0, $index + 1)->implode('/') . ($index < $length - 1 ? '/' : '') . '"')
-    ->implode(' ');
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
-
-
-<!-- ボタン（モーダルを開く） -->
-<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
-  モーダルを開く
-</button>
-
-<!-- モーダル本体 -->
-<div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="myModalLabel">モーダルタイトル</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
-      </div>
-      <div class="modal-body">
-        ここにモーダルの内容を書きます。
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- モーダルを開くボタン -->
-<button id="openModal" class="btn btn-primary">モーダルを開く</button>
-
-<!-- モーダル本体 -->
-<div id="customModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>モーダルタイトル</h2>
-      <span class="close">&times;</span>
-    </div>
-    <div class="modal-body">
-      ここにモーダルの内容を書きます。
-    </div>
-    <div class="modal-footer">
-      <button id="closeModal" class="btn btn-secondary">閉じる</button>
-    </div>
-  </div>
-</div>
-
-<!-- スタイル -->
-<style>
-  /* モーダルの背景（デフォルトは非表示） */
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
-  /* モーダルの中身 */
-  .modal-content {
-    background-color: white;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 8px;
-    width: 50%;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  /* ヘッダー */
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #ddd;
-  }
-
-  /* 閉じるボタン (×) */
-  .close {
-    font-size: 24px;
-    cursor: pointer;
-  }
-
-  /* フッター */
-  .modal-footer {
-    margin-top: 20px;
-    text-align: right;
-  }
-</style>
-
-<!-- JavaScript -->
-<script>
-  // 要素を取得
-  const modal = document.getElementById("customModal");
-  const openBtn = document.getElementById("openModal");
-  const closeBtn = document.getElementById("closeModal");
-  const closeSpan = document.querySelector(".close");
-
-  // モーダルを開く
-  openBtn.addEventListener("click", () => {
-    modal.style.display = "block";
-  });
-
-  // モーダルを閉じる (閉じるボタン)
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-  });
-
-  // モーダルを閉じる (×ボタン)
-  closeSpan.addEventListener("click", () => {
-    modal.style.display = "none";
-  });
-
-  // 背景をクリックしてモーダルを閉じる
-  window.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none";
+class CsvUploadRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
     }
-  });
-</script>
 
-<!-- jQuery（Bootstrap 3 では必須） -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'csv_file' => 'required|file|mimes:csv,txt',
+        ];
+    }
 
-<!-- Bootstrap 3 の JavaScript -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>@section('modal')
-    <!-- モーダルのHTML -->
-    <div id="myModal" class="modal fade" role="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title">モーダルタイトル</h4>
-                </div>
-                <div class="modal-body">
-                    <p>ここにモーダルの内容が入ります。</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    /**
+     * Configure the validator instance.
+     *
+     * @param \Illuminate\Validation\Validator $validator
+     * @return void
+     */
+    public function withValidator(Validator $validator)
+    {
+        $validator->after(function ($validator) {
+            $file = $this->file('csv_file');
 
-    <!-- モーダルを開くボタン -->
-    <button class="btn btn-primary" data-toggle="modal" data-target="#myModal">モーダルを開く</button>
-@endsection
-
-
-
-
-
-
-
-
-@extends('layouts.app')
-
-@section('content')
-    <h1>ホームページへようこそ</h1>
-    <!-- 他のコンテンツ -->
-@endsection
-
-@section('modal')
-    <!-- モーダルのHTML -->
-    <div id="myModal" class="modal fade" role="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title">モーダルタイトル</h4>
-                </div>
-                <div class="modal-body">
-                    <p>ここにモーダルの内容が入ります。</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- モーダルを開くボタン -->
-    <button class="btn btn-primary" data-toggle="modal" data-target="#myModal">モーダルを開く</button>
-@endsection
+            // 拡張子がcsvでない場合のチェック
+            if ($file && $file->getClientOriginalExtension() !== 'csv') {
+                $validator->errors()->add('csv_file', 'The file must be a CSV file.');
+            }
+        });
+    }
+}
