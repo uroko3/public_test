@@ -1,3 +1,7 @@
+$request->validate([
+    'csv_file' => 'required|file|extension:csv',
+]);
+ーーーー上つかえなかったら。。。下ーーーー
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
