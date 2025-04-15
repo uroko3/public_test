@@ -1,51 +1,66 @@
-$request->validate([
-    'csv_file' => 'required|file|extension:csv',
-]);
-ーーーー上つかえなかったら。。。下ーーーー
-namespace App\Http\Requests;
-
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
+use Illuminate\Support\Facades\Validator;
 
 class CsvUploadRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array
-     */
-    public function rules()
+    public function rules(): array
     {
         return [
             'csv_file' => 'required|file|mimes:csv,txt',
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     *
-     * @param \Illuminate\Validation\Validator $validator
-     * @return void
-     */
-    public function withValidator(Validator $validator)
+    public function withValidator($validator)
     {
         $validator->after(function ($validator) {
             $file = $this->file('csv_file');
 
-            // 拡張子がcsvでない場合のチェック
-            if ($file && $file->getClientOriginalExtension() !== 'csv') {
-                $validator->errors()->add('csv_file', 'The file must be a CSV file.');
+            if (!$file->isValid()) {
+                return;
+            }
+
+            $csv = new \SplFileObject($file->getRealPath());
+            $csv->setFlags(\SplFileObject::READ_CSV);
+            
+            $rowCount = 0;
+            foreach ($csv as $row) {
+                if ($row === [null] || empty(array_filter($row))) {
+                    continue;
+                }
+
+                // ヘッダー行をスキップする場合
+                if ($rowCount === 0) {
+                    $rowCount++;
+                    continue;
+                }
+
+                $data = [
+                    'name' => $row[0] ?? null,
+                    'email' => $row[1] ?? null,
+                    'age' => $row[2] ?? null,
+                ];
+
+                $rowValidator = Validator::make($data, [
+                    'name' => 'required|string|max:255',
+                    'email' => 'required|email',
+                    'age' => 'nullable|integer|min:0',
+                ]);
+
+                if ($rowValidator->fails()) {
+                    $messages = $rowValidator->errors()->all();
+                    foreach ($messages as $message) {
+                        $validator->errors()->add("row_{$rowCount}", "行{$rowCount}: {$message}");
+                    }
+                }
+
+                $rowCount++;
             }
         });
     }
 }
+
