@@ -1,0 +1,54 @@
+import mysql.connector
+from mysql.connector import MySQLConnection, Error
+
+
+class MySQLHelper:
+    def __init__(self, config: dict):
+        """
+        config例:
+        {
+            'host': 'your-host',
+            'user': 'your-user',
+            'password': 'your-password',
+            'database': 'your-database',
+            'ssl_ca': '/path/to/rds-combined-ca-bundle.pem'  # 任意
+        }
+        """
+        self.config = config
+        self.conn: MySQLConnection = None
+        self.cursor = None
+
+    def connect(self):
+        self.conn = mysql.connector.connect(**self.config)
+        self.cursor = self.conn.cursor(dictionary=True)
+
+    def close(self):
+        if self.cursor:
+            self.cursor.close()
+        if self.conn:
+            self.conn.close()
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def select(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+        return self.cursor.fetchall()
+
+    def execute(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+        self.conn.commit()
+        return self.cursor.rowcount
+
+    def start_transaction(self):
+        self.conn.start_transaction()
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
