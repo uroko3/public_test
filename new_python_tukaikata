@@ -1,0 +1,32 @@
+try:
+    with MySQLHelper(config) as db:
+        result = db.select("SELECT * FROM invalid_table")
+except RuntimeError as e:
+    print(f"エラー発生: {str(e)}")
+
+もしくは
+
+def lambda_handler(event, context):
+    config = {
+        'host': 'your-host',
+        'user': 'your-user',
+        'password': 'your-password',
+        'database': 'your-database',
+        'ssl_ca': '/path/to/rds-combined-ca-bundle.pem'
+    }
+
+    db = MySQLHelper(config)
+    try:
+        result = db.select("SELECT * FROM users WHERE id = %s", (event['id'],))
+        return {
+            'statusCode': 200,
+            'body': result
+        }
+    except RuntimeError as e:
+        print(f"DBエラー: {e}")
+        return {
+            'statusCode': 500,
+            'body': f"内部エラー: {e}"
+        }
+    finally:
+        db.close()
