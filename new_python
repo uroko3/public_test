@@ -4,29 +4,28 @@ from mysql.connector import MySQLConnection, Error
 
 class MySQLHelper:
     def __init__(self, config: dict):
-        """
-        config例:
-        {
-            'host': 'your-host',
-            'user': 'your-user',
-            'password': 'your-password',
-            'database': 'your-database',
-            'ssl_ca': '/path/to/rds-combined-ca-bundle.pem'  # 任意
-        }
-        """
         self.config = config
         self.conn: MySQLConnection = None
         self.cursor = None
 
     def connect(self):
-        self.conn = mysql.connector.connect(**self.config)
-        self.cursor = self.conn.cursor(dictionary=True)
+        if not self.conn or not self.conn.is_connected():
+            try:
+                self.conn = mysql.connector.connect(**self.config)
+                self.cursor = self.conn.cursor(dictionary=True)
+            except Error as e:
+                raise RuntimeError(f"MySQL接続に失敗しました: {e}")
 
     def close(self):
-        if self.cursor:
-            self.cursor.close()
-        if self.conn:
-            self.conn.close()
+        try:
+            if self.cursor:
+                self.cursor.close()
+                self.cursor = None
+            if self.conn:
+                self.conn.close()
+                self.conn = None
+        except Error as e:
+            raise RuntimeError(f"MySQL切断時にエラーが発生しました: {e}")
 
     def __enter__(self):
         self.connect()
@@ -36,19 +35,40 @@ class MySQLHelper:
         self.close()
 
     def select(self, sql, params=None):
-        self.cursor.execute(sql, params or ())
-        return self.cursor.fetchall()
+        self.connect()
+        try:
+            self.cursor.execute(sql, params or ())
+            return self.cursor.fetchall()
+        except Error as e:
+            raise RuntimeError(f"SELECTクエリの実行に失敗しました: {e}")
 
     def execute(self, sql, params=None):
-        self.cursor.execute(sql, params or ())
-        self.conn.commit()
-        return self.cursor.rowcount
+        self.connect()
+        try:
+            self.cursor.execute(sql, params or ())
+            self.conn.commit()
+            return self.cursor.rowcount
+        except Error as e:
+            self.conn.rollback()
+            raise RuntimeError(f"クエリ実行に失敗しました（ロールバック実行）: {e}")
 
     def start_transaction(self):
-        self.conn.start_transaction()
+        self.connect()
+        try:
+            self.conn.start_transaction()
+        except Error as e:
+            raise RuntimeError(f"トランザクションの開始に失敗しました: {e}")
 
     def commit(self):
-        self.conn.commit()
+        try:
+            if self.conn:
+                self.conn.commit()
+        except Error as e:
+            raise RuntimeError(f"コミットに失敗しました: {e}")
 
     def rollback(self):
-        self.conn.rollback()
+        try:
+            if self.conn:
+                self.conn.rollback()
+        except Error as e:
+            raise RuntimeError(f"ロールバックに失敗しました: {e}")
