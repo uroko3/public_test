@@ -1,0 +1,12 @@
+# ホスト上で
+docker pull python:3.13-slim
+
+docker run -it --rm -v $(pwd):/work python:3.13-slim bash
+# コンテナ内で
+apt update && apt install -y gcc libssl-dev libffi-dev build-essential
+mkdir -p /work/python
+pip install mysql-connector-python -t /work/python
+exit
+
+# ホストに戻って
+zip -r9 mysql_connector_python_layer.zip python
