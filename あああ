@@ -16,14 +16,14 @@ zip -r9 mysql_connector_python_layer.zip python
 Cloud Shell + Dockerで mysqlclient Lambda Layer 作成手順
 1. 作業ディレクトリを作る
 bash
-コピーする
-編集する
+
 mkdir mysqlclient-layer
 cd mysqlclient-layer
+
+
 2. Dockerfile 作成
 bash
-コピーする
-編集する
+
 cat <<EOF > Dockerfile
 FROM amazonlinux:2
 
@@ -38,23 +38,48 @@ RUN pip3.11 install mysqlclient -t /lambda-layer/python
 WORKDIR /lambda-layer
 RUN zip -r9 /opt/mysqlclient-layer.zip .
 EOF
+
+
 3. Dockerイメージビルド
 bash
-コピーする
-編集する
+
 docker build -t mysqlclient-layer .
+
+
 4. コンテナ実行してLayer zip作成・取得
 bash
-コピーする
-編集する
+
 docker run --rm -v $PWD:/opt mysqlclient-layer
 このコマンドでカレントディレクトリに
 
 python
-コピーする
-編集する
+
 mysqlclient-layer.zip
 ができているはずです。
+
+---------
+
+例：Layer を作る手順（CloudShell やローカル共通）
+bash
+
+docker run -it --rm --entrypoint bash -v "$PWD":/var/task public.ecr.aws/lambda/python:3.13
+中で以下を実行：
+
+bash
+
+mkdir -p python
+pip install "pymysql[rsa]" -t python/
+zip -r layer.zip python
+exit
+CloudShell 上で layer.zip を確認できます。
+
+---------
+
+https://www.amazontrust.com/repository/AmazonRootCA1.pem
+https://www.amazontrust.com/repository/AmazonRootCA2.pem
+https://www.amazontrust.com/repository/AmazonRootCA3.pem
+
+---------
 
 
 
