@@ -10,3 +10,51 @@ exit
 
 # ホストに戻って
 zip -r9 mysql_connector_python_layer.zip python
+
+--------
+
+Cloud Shell + Dockerで mysqlclient Lambda Layer 作成手順
+1. 作業ディレクトリを作る
+bash
+コピーする
+編集する
+mkdir mysqlclient-layer
+cd mysqlclient-layer
+2. Dockerfile 作成
+bash
+コピーする
+編集する
+cat <<EOF > Dockerfile
+FROM amazonlinux:2
+
+RUN yum update -y && \
+    yum install -y python3.11 python3.11-devel gcc mysql-devel zip && \
+    python3.11 -m ensurepip && python3.11 -m pip install --upgrade pip
+
+RUN mkdir -p /lambda-layer/python
+
+RUN pip3.11 install mysqlclient -t /lambda-layer/python
+
+WORKDIR /lambda-layer
+RUN zip -r9 /opt/mysqlclient-layer.zip .
+EOF
+3. Dockerイメージビルド
+bash
+コピーする
+編集する
+docker build -t mysqlclient-layer .
+4. コンテナ実行してLayer zip作成・取得
+bash
+コピーする
+編集する
+docker run --rm -v $PWD:/opt mysqlclient-layer
+このコマンドでカレントディレクトリに
+
+python
+コピーする
+編集する
+mysqlclient-layer.zip
+ができているはずです。
+
+
+
