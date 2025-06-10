@@ -81,6 +81,8 @@ https://www.amazontrust.com/repository/AmazonRootCA3.pem
 
 ---------
 
+▼https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/example_serverless_connect_RDS_Lambda_section.html
+
 import json
 import os
 import boto3
