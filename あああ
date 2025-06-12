@@ -158,3 +158,71 @@ export const handler = async (event) => {
   };
 };
 
+-------
+
+// MySQLClient.mjs
+import mysql from 'mysql2/promise';
+
+export class MySQLClient {
+  constructor(config) {
+    this.config = config;
+    this.connection = null;
+  }
+
+  async connect() {
+    if (!this.connection) {
+      this.connection = await mysql.createConnection(this.config);
+    }
+  }
+
+  async disconnect() {
+    if (this.connection) {
+      await this.connection.end();
+      this.connection = null;
+    }
+  }
+
+  async query(sql, params = []) {
+    await this.connect();
+    const [results] = await this.connection.execute(sql, params);
+
+    if (sql.trim().toUpperCase().startsWith('SELECT')) {
+      return results;
+    } else {
+      return results.affectedRows;
+    }
+  }
+
+  async beginTransaction() {
+    await this.connect();
+    await this.connection.beginTransaction();
+  }
+
+  async commit() {
+    if (this.connection) {
+      await this.connection.commit();
+    }
+  }
+
+  async rollback() {
+    if (this.connection) {
+      await this.connection.rollback();
+    }
+  }
+
+  async runInTransaction(callback) {
+    await this.connect();
+    try {
+      await this.beginTransaction();
+      const result = await callback(this);
+      await this.commit();
+      return result;
+    } catch (err) {
+      await this.rollback();
+      throw err;
+    } finally {
+      await this.disconnect();
+    }
+  }
+}
+
