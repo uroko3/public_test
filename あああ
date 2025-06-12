@@ -161,6 +161,7 @@ export const handler = async (event) => {
 -------
 
 // MySQLClient.mjs
+// MySQLClient.mjs
 import mysql from 'mysql2/promise';
 
 export class MySQLClient {
@@ -170,43 +171,67 @@ export class MySQLClient {
   }
 
   async connect() {
-    if (!this.connection) {
-      this.connection = await mysql.createConnection(this.config);
+    try {
+      if (!this.connection) {
+        this.connection = await mysql.createConnection(this.config);
+      }
+    } catch (err) {
+      throw new Error(`MySQL connect failed: ${err.message}`);
     }
   }
 
   async disconnect() {
-    if (this.connection) {
-      await this.connection.end();
-      this.connection = null;
+    try {
+      if (this.connection) {
+        await this.connection.end();
+        this.connection = null;
+      }
+    } catch (err) {
+      throw new Error(`MySQL disconnect failed: ${err.message}`);
     }
   }
 
   async query(sql, params = []) {
-    await this.connect();
-    const [results] = await this.connection.execute(sql, params);
+    try {
+      await this.connect();
+      const [results] = await this.connection.execute(sql, params);
 
-    if (sql.trim().toUpperCase().startsWith('SELECT')) {
-      return results;
-    } else {
-      return results.affectedRows;
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        return results;
+      } else {
+        return results.affectedRows;
+      }
+    } catch (err) {
+      throw new Error(`MySQL query failed: ${err.message}`);
     }
   }
 
   async beginTransaction() {
-    await this.connect();
-    await this.connection.beginTransaction();
+    try {
+      await this.connect();
+      await this.connection.beginTransaction();
+    } catch (err) {
+      throw new Error(`MySQL beginTransaction failed: ${err.message}`);
+    }
   }
 
   async commit() {
-    if (this.connection) {
-      await this.connection.commit();
+    try {
+      if (this.connection) {
+        await this.connection.commit();
+      }
+    } catch (err) {
+      throw new Error(`MySQL commit failed: ${err.message}`);
     }
   }
 
   async rollback() {
-    if (this.connection) {
-      await this.connection.rollback();
+    try {
+      if (this.connection) {
+        await this.connection.rollback();
+      }
+    } catch (err) {
+      throw new Error(`MySQL rollback failed: ${err.message}`);
     }
   }
 
@@ -218,11 +243,12 @@ export class MySQLClient {
       await this.commit();
       return result;
     } catch (err) {
-      await this.rollback();
+      await this.rollback().catch((rollbackErr) => {
+        throw new Error(`Rollback also failed: ${rollbackErr.message}, original error: ${err.message}`);
+      });
       throw err;
     } finally {
-      await this.disconnect();
+      await this.disconnect().catch(() => {});
     }
   }
 }
-
