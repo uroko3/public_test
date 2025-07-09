@@ -1,0 +1,15 @@
+$sql = <<<SQL
+WITH RECURSIVE breadcrumb_cte AS (
+    SELECT id, parent_id, name, 1 AS depth
+    FROM breadcrumbs
+    WHERE id = ?
+
+    UNION ALL
+
+    SELECT b.id, b.parent_id, b.name, cte.depth + 1
+    FROM breadcrumbs b
+    INNER JOIN breadcrumb_cte cte ON b.parent_id = cte.id
+)
+SELECT * FROM breadcrumb_cte
+ORDER BY depth
+SQL;
