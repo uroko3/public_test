@@ -1,21 +1,17 @@
 @if ($showModal)
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white w-full max-w-6xl h-[80vh] p-6 rounded-lg shadow-lg overflow-hidden">
+     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white w-[95%] h-[90vh] p-6 rounded-lg shadow-lg overflow-hidden">
             <div class="flex h-full">
                 <!-- 左カラム：データリスト -->
-                <div class="w-3/4 pr-4 border-r border-gray-300 overflow-y-auto">
+                <div class="w-5/6 pr-4 border-r border-gray-300 overflow-y-auto">
                     <h2 class="text-lg font-bold mb-4">データ一覧</h2>
                     <ul class="space-y-2">
-                        @foreach ($items as $item)
-                            <li class="p-3 bg-gray-50 border rounded shadow-sm">
-                                {{ $item->name }}
-                            </li>
-                        @endforeach
+                       あいうえお
                     </ul>
                 </div>
 
                 <!-- 右カラム：3つのカード -->
-                <div class="w-1/4 pl-4 overflow-y-auto flex flex-col space-y-4">
+                <div class="w-1/6 pl-4 overflow-y-auto flex flex-col space-y-4">
                     <!-- カード① -->
                     <div class="bg-gray-100 p-4 rounded shadow">
                         <h3 class="text-md font-semibold mb-2">新規作成</h3>
