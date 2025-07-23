@@ -87,3 +87,119 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <div class="breadcrumb-placeholder"></div>
+
+
+▼その２（If-Modified-Since に対応する）
+# Lambda function: lambda_function.py
+from database import Database
+from email.utils import formatdate, parsedate_to_datetime
+import time
+import re
+
+def lambda_handler(event, context):
+    path = event.get("path") or ""
+
+    prefix = "/breadcrumb/"
+    if not path.startswith(prefix):
+        return {
+            "statusCode": 404,
+            "headers": {"Content-Type": "text/plain"},
+            "body": "Invalid path"
+        }
+
+    basepath = path[len(prefix):].lstrip('/')
+
+    if not re.fullmatch(r'[a-zA-Z0-9/_\-\.]+', basepath) or '..' in basepath:
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "text/plain"},
+            "body": "Invalid basepath"
+        }
+
+    try:
+        db = Database()
+        rows = db.execute("SELECT breadcrumb_html, updated_at FROM breadcrumbs WHERE url_key = ?", (basepath,))
+
+        if not rows:
+            return {
+                "statusCode": 404,
+                "headers": {"Content-Type": "text/plain"},
+                "body": f"Breadcrumb not found for '{basepath}'"
+            }
+
+        breadcrumb_html = rows[0]["breadcrumb_html"]
+        updated_at = rows[0]["updated_at"]
+        last_modified = formatdate(time.mktime(updated_at.timetuple()), usegmt=True)
+
+        # Check for If-Modified-Since header
+        if_modified_since = event.get('headers', {}).get('if-modified-since')
+        if if_modified_since:
+            try:
+                ims_dt = parsedate_to_datetime(if_modified_since)
+                if updated_at <= ims_dt:
+                    return {
+                        "statusCode": 304,
+                        "headers": {
+                            "Content-Type": "text/html",
+                            "Last-Modified": last_modified,
+                            "Cache-Control": "max-age=300"
+                        },
+                        "body": ""
+                    }
+            except Exception:
+                pass  # Ignore parsing errors and proceed with normal response
+
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "text/html",
+                "Cache-Control": "max-age=300",
+                "Last-Modified": last_modified
+            },
+            "body": breadcrumb_html
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "text/plain"},
+            "body": f"Internal server error: {str(e)}"
+        }
+
+
+# Frontend JavaScript snippet: insert into HTML or JS file
+# Note: Make sure your HTML contains an element like <div class="breadcrumb-placeholder"></div>
+
+"""
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const placeholderClass = '.breadcrumb-placeholder';
+  const currentPath = location.pathname.replace(/^\/+/,'');
+
+  fetch(`/breadcrumb/${currentPath}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch breadcrumb");
+      return response.text();
+    })
+    .then(html => {
+      document.querySelectorAll(placeholderClass).forEach(el => {
+        el.outerHTML = html;
+      });
+    })
+    .catch(error => {
+      console.error("Breadcrumb fetch error:", error);
+    });
+});
+</script>
+"""
+
+# Example SQL schema for breadcrumbs table:
+
+"""
+CREATE TABLE breadcrumbs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  url_key VARCHAR(255) UNIQUE NOT NULL,
+  breadcrumb_html TEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+"""
