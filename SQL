@@ -1,0 +1,9 @@
+▼存在しない親を持つ子
+SELECT *
+FROM tbl AS child
+WHERE child.parent_key IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tbl AS parent
+    WHERE parent.key = child.parent_key
+);
