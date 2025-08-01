@@ -1,0 +1,143 @@
+▼app/Livewire/Forms/CsvUploadForm.php
+<?php
+
+namespace App\Livewire\Forms;
+
+use Livewire\Form;
+use Livewire\WithFileUploads;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\Validator;
+
+use Illuminate\Support\Facades\Log;
+
+class CsvUploadForm extends Form
+{
+    //use WithFileUploads;
+
+    public ?UploadedFile $file;
+
+    public string $file_name = '';
+    public string $csv_text = '';
+    public string $json_data = '';
+
+    public function rules(): array
+    {
+        return [
+            'file' =>   [
+                'required',
+                'file',
+                'mimes:csv,txt',
+                'max:10240',
+            ],
+            'file_name' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+            'csv_text' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+            'json_data' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+        ];
+    }
+
+    public function prepareForValidation($attributes): array
+    {
+        logger()->debug('[CsvUploadForm] prepareForValidation called', [$attributes]); // ← 呼ばれているか確認
+        if (isset($attributes['file'])) {
+            $attributes['file_name'] = $attributes['file']->getClientOriginalName();
+            $attributes['csv_text'] = file_get_contents($attributes['file']->getRealPath());
+            $attributes['json_data'] = json_encode(array_map('str_getcsv', explode("\n", $attributes['csv_text'])), JSON_UNESCAPED_UNICODE);
+            // プロパティは上記だけでは設定されないので明示的員ここでセット
+            // これでコンポーネントから参照できる
+            $this->file_name = $attributes['file_name'];
+            $this->csv_text = $attributes['csv_text']; 
+            $this->json_data = $attributes['json_data'];
+        }   
+        logger()->debug('[CsvUploadForm] prepared attributes', [$attributes]); // ← 確認用ログ
+        return $attributes;
+    }
+
+}
+
+▼app/Livewire/CsvUploader.php
+<?php
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use App\Livewire\Forms\CsvUploadForm;
+use App\Models\CsvUpload;
+
+class CsvUploader extends Component
+{
+    use WithFileUploads;
+
+    public CsvUploadForm $form;
+
+    public $file;
+
+    public function save()
+    {
+        logger()->debug('[CsvUploader] save called', [$this->form->file]); // ← 呼ばれているか確認
+        $this->validate();
+        /*
+        logger()->debug('[CsvUploader] form data before processing', [
+            'file_name' => $this->form->file_name,
+            'csv_text' => $this->form->csv_text,
+            'json_data' => $this->form->json_data,
+        ]); // ← 確認用ログ
+        $this->form->processFile();
+        logger()->debug('[CsvUploader] form data after processing', [
+            'file_name' => $this->form->file_name,
+            'csv_text' => $this->form->csv_text,
+            'json_data' => $this->form->json_data,
+        ]); // ← 確認用ログ
+        */
+
+logger()->debug('xxxx1');
+        if (!$this->form->json_data) {
+logger()->debug('xxxx1-2');
+            session()->flash('message', 'JSONデータが空のため保存できません。');
+            return;
+        }
+logger()->debug('xxxx2');
+        CsvUpload::create([
+            'file_name' => $this->form->file_name,
+            'csv_text' => $this->form->csv_text,
+            'json_data' => $this->form->json_data,
+        ]);
+logger()->debug('xxxx3');
+        session()->flash('message', 'CSVファイルを保存しました！');
+        $this->form->reset();
+        $this->reset('file');
+    }
+
+    public function render()
+    {
+        return view('livewire.csv-uploader')->layout('layouts.app');
+    }
+}
+
+▼resources/views/livewire/csv-uploader.blade.php
+<div>
+    @if (session()->has('message'))
+        <div class="text-green-500">{{ session('message') }}</div>
+    @endif
+    @error('form.file')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.file_name')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.csv_text')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.json_data')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    <input type="file" wire:model="form.file">
+
+    <button type="button" wire:click="save">アップロード</button>
+</div>
+
+
+
+
+
+
+
