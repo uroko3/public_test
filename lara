@@ -14,7 +14,7 @@ class CsvUploadForm extends Form
 {
     //use WithFileUploads;
 
-    public ?UploadedFile $file;
+    public ?UploadedFile $file = null;
 
     public string $file_name = '';
     public string $csv_text = '';
@@ -54,6 +54,7 @@ class CsvUploadForm extends Form
 
 }
 
+
 ▼app/Livewire/CsvUploader.php
 <?php
 namespace App\Livewire;
@@ -69,42 +70,36 @@ class CsvUploader extends Component
 
     public CsvUploadForm $form;
 
-    public $file;
+    //public $file;
 
     public function save()
     {
-        logger()->debug('[CsvUploader] save called', [$this->form->file]); // ← 呼ばれているか確認
-        $this->validate();
-        /*
-        logger()->debug('[CsvUploader] form data before processing', [
-            'file_name' => $this->form->file_name,
-            'csv_text' => $this->form->csv_text,
-            'json_data' => $this->form->json_data,
-        ]); // ← 確認用ログ
-        $this->form->processFile();
-        logger()->debug('[CsvUploader] form data after processing', [
-            'file_name' => $this->form->file_name,
-            'csv_text' => $this->form->csv_text,
-            'json_data' => $this->form->json_data,
-        ]); // ← 確認用ログ
-        */
+        logger()->debug('[CsvUploader] save called', []);
+        // ① エンコーディングチェックを最初に実行
+        if ($this->form->file) {
+            $raw = file_get_contents($this->form->file->getRealPath());
+            if (!mb_check_encoding($raw, 'UTF-8')) {
+                $this->resetErrorBag();
+                $this->addError('form.file', 'CSVファイルはUTF-8で保存してください。');
+                $this->form->reset();
+                return;
+            }
+        }
 
-logger()->debug('xxxx1');
+        $this->validate();
+
         if (!$this->form->json_data) {
-logger()->debug('xxxx1-2');
             session()->flash('message', 'JSONデータが空のため保存できません。');
             return;
-        }
-logger()->debug('xxxx2');
+        };
         CsvUpload::create([
             'file_name' => $this->form->file_name,
             'csv_text' => $this->form->csv_text,
             'json_data' => $this->form->json_data,
         ]);
-logger()->debug('xxxx3');
         session()->flash('message', 'CSVファイルを保存しました！');
         $this->form->reset();
-        $this->reset('file');
+        //$this->reset();
     }
 
     public function render()
@@ -112,6 +107,7 @@ logger()->debug('xxxx3');
         return view('livewire.csv-uploader')->layout('layouts.app');
     }
 }
+
 
 ▼resources/views/livewire/csv-uploader.blade.php
 <div>
@@ -130,9 +126,24 @@ logger()->debug('xxxx3');
     @error('form.json_data')
     <div class="text-danger">{{ $message }}</div>
     @enderror
-    <input type="file" wire:model="form.file">
 
-    <button type="button" wire:click="save">アップロード</button>
+    <div>
+        <div wire:loading.class="opacity-50 pointer-events-none" wire:loading.target="form.file, save">
+            <input
+                type="file"
+                wire:loading.attr="disabled"
+                wire:model="form.file"
+            >
+        </div>
+    </div>
+    <div>
+        <div wire:loading.class="opacity-50 pointer-events-none" wire:loading.target="form.file, save">
+            <button type="button" wire:loading.attr="disabled" wire:click="save">SAVE</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン1</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン2</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン3</button>
+        </div>
+    </div>
 </div>
 
 
