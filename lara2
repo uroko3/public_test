@@ -1,0 +1,165 @@
+▼app/Livewire/Forms/CsvUploadForm.php
+<?php
+
+namespace App\Livewire\Forms;
+
+use Livewire\Form;
+use Livewire\WithFileUploads;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\Validator;
+
+use Illuminate\Support\Facades\Log;
+
+class CsvUploadForm extends Form
+{
+    //use WithFileUploads;
+
+    public ?UploadedFile $file = null;
+
+    public string $file_name = '';
+    public string $csv_text = '';
+    public string $json_data = '';
+
+    public function rules(): array
+    {
+        return [
+            'file' =>   [
+                'required',
+                'file',
+                'mimes:csv,txt',
+                'max:10240',
+            ],
+            'file_name' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+            'csv_text' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+            'json_data' => 'required|string', // prepareForValidationでattributesにセットしたらこのルールが効く
+        ];
+    }
+
+    public function prepareForValidation($attributes): array
+    {
+        logger()->debug('[CsvUploadForm] prepareForValidation called', [$attributes]); // ← 呼ばれているか確認
+        if (isset($attributes['file'])) {
+            $attributes['file_name'] = $attributes['file']->getClientOriginalName();
+            $attributes['csv_text'] = file_get_contents($attributes['file']->getRealPath());
+            $attributes['json_data'] = json_encode(array_map('str_getcsv', explode("\n", $attributes['csv_text'])), JSON_UNESCAPED_UNICODE);
+            // プロパティは上記だけでは設定されないので明示的員ここでセット
+            // これでコンポーネントから参照できる
+            $this->file_name = $attributes['file_name'];
+            $this->csv_text = $attributes['csv_text']; 
+            $this->json_data = $attributes['json_data'];
+        }   
+        logger()->debug('[CsvUploadForm] prepared attributes', [$attributes]); // ← 確認用ログ
+        return $attributes;
+    }
+
+}
+
+▼app/Livewire/CsvUploader.php
+<?php
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use App\Livewire\Forms\CsvUploadForm;
+use App\Models\CsvUpload;
+use Throwable;
+
+class CsvUploader extends Component
+{
+    use WithFileUploads;
+
+    public CsvUploadForm $form;
+
+    public function save()
+    {
+        logger()->debug('[CsvUploader] save called', []);
+
+        if(!$this->beforeValidate()) {
+            $this->form->reset();
+            return;
+        }
+        $data = $this->validate();
+        logger()->debug('[CsvUploader] validated data', [$data]);
+
+        if (!$this->form->json_data) {
+            session()->flash('message', 'JSONデータが空のため保存できません。');
+            return;
+        };
+        CsvUpload::create([
+            'file_name' => $this->form->file_name,
+            'csv_text' => $this->form->csv_text,
+            'json_data' => $this->form->json_data,
+        ]);
+        session()->flash('message', 'CSVファイルを保存しました！');
+        $this->form->reset();
+    }
+
+    protected function beforeValidate() : bool
+    {
+        try {
+            $this->resetErrorBag();
+            if(!$this->form->file) {
+                return false;
+            }
+            $raw = file_get_contents($this->form->file->getRealPath());
+            if (!mb_check_encoding($raw, 'UTF-8')) {
+                $this->addError('form.file', 'ファイルの文字コードは UTF-8 にしてください。');
+                return false;
+            }
+            return true;
+        } catch (Throwable $e) {
+            $this->addError('form.file', 'ファイルの読み込みに失敗しました。再度アップロードしてください。');
+            return false;
+        }
+    }
+
+    public function updatedFormFile()
+    {
+        if(!$this->beforeValidate()) {
+            return;
+        }
+        $this->validate();
+    }
+
+    public function render()
+    {
+        return view('livewire.csv-uploader')->layout('layouts.app');
+    }
+}
+
+▼resources/views/livewire/csv-uploader.blade.php
+<div>
+    @if (session()->has('message'))
+        <div class="text-green-500">{{ session('message') }}</div>
+    @endif
+    @error('form.file')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.file_name')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.csv_text')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+    @error('form.json_data')
+    <div class="text-danger">{{ $message }}</div>
+    @enderror
+
+    <div>
+        <div wire:loading.class="opacity-50 pointer-events-none" wire:loading.target="form.file, save">
+            <input
+                type="file"
+                wire:loading.attr="disabled"
+                wire:model="form.file"
+            >
+        </div>
+    </div>
+    <div>
+        <div wire:loading.class="opacity-50 pointer-events-none" wire:loading.target="form.file, save">
+            <button type="button" wire:loading.attr="disabled" wire:click="save">SAVE</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン1</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン2</button>
+            <button type="button" wire:loading.attr="disabled" wire:click="save">ボタン3</button>
+        </div>
+    </div>
+</div>
