@@ -22,5 +22,5 @@ public function rules(): array
     	'required',
     	'regex:/^(?!.*javascript:)(https?:\/\/[^\s<>"']+|\/[^\s<>"']*)$/i'
     ],
-	],
+  ];
 }
