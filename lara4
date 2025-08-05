@@ -1,0 +1,26 @@
+^(?!\/)：先頭がスラッシュ / でないことを保証（否定先読み）
+
+(?!.*\.\.)：どこかに ..（連続ピリオド）が 含まれていたら不合格
+
+[a-zA-Z0-9_\-\/\.]+：許可する文字（英数字、アンダースコア、ハイフン、スラッシュ、ピリオド）
+
+public function rules(): array
+{
+    return [
+        'form.path' => [
+            'required',
+            'regex:/^(?!\/)(?!.*\.\.)[a-zA-Z0-9_\-\/\.]+$/'
+        ],
+    ];
+}
+
+
+public function rules(): array
+{
+  return [
+    'form.url' => [
+    	'required',
+    	'regex:/^(?!.*javascript:)(https?:\/\/[^\s<>"']+|\/[^\s<>"']*)$/i'
+    ],
+	],
+}
