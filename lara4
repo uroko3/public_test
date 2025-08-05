@@ -67,3 +67,27 @@ def lambda_handler(event, context):
         'body': html,
         'headers': {'Content-Type': 'text/html'}
     }
+
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+
+import time
+
+# key -> (html, 最終取得時刻)
+html_cache: dict[str, tuple[str, float]] = {}
+TTL_SECONDS = 300  # 5分
+
+def get_html(key: str) -> str:
+    global html_cache
+    cached = html_cache.get(key)
+
+    if cached:
+        html, timestamp = cached
+        if time.time() - timestamp < TTL_SECONDS:
+            return html  # 有効期限内ならキャッシュ使用
+
+    # 期限切れ or キャッシュなしならDBから取得
+    html = load_html_from_db(key)
+    html_cache[key] = (html, time.time())
+    return html
