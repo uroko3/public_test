@@ -91,3 +91,17 @@ def get_html(key: str) -> str:
     html = load_html_from_db(key)
     html_cache[key] = (html, time.time())
     return html
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+def lambda_handler(event, context):
+    html = "<ul><li>hoge</li></ul>"  # 任意のHTML
+
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Content-Type': 'text/html',
+            'Cache-Control': 'max-age=30'  # ← ここが重要！
+        },
+        'body': html
+    }
