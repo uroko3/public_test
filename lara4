@@ -24,3 +24,46 @@ public function rules(): array
     ],
   ];
 }
+
+
+from html.parser import HTMLParser
+
+# 危険タグ・属性・スキーム検出用パーサ
+class SecurityTagChecker(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.found_danger = False
+
+    def handle_starttag(self, tag, attrs):
+        # 危険なタグ
+        if tag.lower() in ['script', 'iframe', 'object', 'embed', 'svg']:
+            self.found_danger = True
+        # 属性チェック
+        for attr, value in attrs:
+            if attr.lower().startswith('on'):  # onerror, onclick, etc
+                self.found_danger = True
+            if isinstance(value, str) and 'javascript:' in value.lower():
+                self.found_danger = True
+
+# 安全かどうかのチェック関数
+def is_html_safe(html: str) -> bool:
+    parser = SecurityTagChecker()
+    parser.feed(html)
+    return not parser.found_danger
+
+# Lambdaハンドラ
+def lambda_handler(event, context):
+    # ★ 本来はここでDBから取得する
+    html = get_html_from_database(event)  # 実装は別途
+    if not is_html_safe(html):
+        return {
+            'statusCode': 400,
+            'body': '危険なHTMLが検出されました',
+            'headers': {'Content-Type': 'text/plain'}
+        }
+
+    return {
+        'statusCode': 200,
+        'body': html,
+        'headers': {'Content-Type': 'text/html'}
+    }
