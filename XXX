@@ -1,0 +1,104 @@
+#/bin/bash
+
+find /c/wk/find_test -type f -name '*.pk' | while read pkz; do
+    html="${pk%.pk}.html"
+    if [ -f "$html" ]; then
+        echo "\"$html\",\"$pk\""
+    fi
+done
+
+
+
+<?php
+
+mb_internal_encoding('UTF-8');
+
+// ===== 設定 =====
+$CSV         = __DIR__ . '/pk.csv';       // 先に find で作ったCSV
+$OUT_SQL     = __DIR__ . '/insert_pk_pairs.sql';
+
+$TABLE       = 'pk_pairs';                      // テーブル名
+$COL_HTML    = 'html_path';                      // HTMLパス格納カラム
+$COL_PKZ     = 'pk_html';                       // PK(本文)格納カラム
+
+// 相対パス化したい場合はここに基準を入れる（例: '/c/wk/find_test/html_sample_v6/'）。空なら絶対パスのまま。
+$BASE_STRIP  = '/c/wk/find_test/';
+// =================
+
+// パス用の最低限のエスケープ（SQL文字列リテラル用）
+$escapeSqlString = function (string $s): string {
+    $s = str_replace("\\", "\\\\", $s); // backslash → \\
+    $s = str_replace("'", "\\'", $s);   // single quote → \'
+    return $s;
+};
+
+if (!is_file($CSV)) {
+    fwrite(STDERR, "CSVが見つかりません: $CSV\n");
+    exit(1);
+}
+
+$fp = fopen($CSV, 'r');
+if (!$fp) {
+    fwrite(STDERR, "CSVを開けません: $CSV\n");
+    exit(2);
+}
+
+$fh = fopen($OUT_SQL, 'w');
+if (!$fh) {
+    fwrite(STDERR, "SQL出力ファイルを開けません: $OUT_SQL\n");
+    exit(3);
+}
+
+fwrite($fh, "-- auto-generated at " . date('c') . PHP_EOL);
+fwrite($fh, "SET NAMES utf8mb4;\n");
+fwrite($fh, "START TRANSACTION;\n");
+
+$rows = 0;
+$skipped = 0;
+
+while (($row = fgetcsv($fp)) !== false) {
+    // CSV: ["htmlAbs", "pkAbs"]
+    if (count($row) < 2) { $skipped++; continue; }
+    $htmlAbs = trim($row[0]);
+    $pkAbs  = trim($row[1]);
+    
+    $pkAbs = preg_replace("/\/c\//", 'c:/', $pkAbs);
+
+    echo "$htmlAbs\n";
+    echo "$pkAbs\n";
+/*
+    if (!is_file($htmlAbs) || !is_file($pkAbs)) {
+        $skipped++;
+        continue;
+    }
+ */
+    // 相対パスキー化（必要な場合のみ）
+    $key = $htmlAbs;
+    if ($BASE_STRIP !== '' && str_starts_with($key, $BASE_STRIP)) {
+        $key = substr($key, strlen($BASE_STRIP));
+    }
+
+    // PKのオリジナルHTMLを読み込み → HEX(0x...) に変換（改行やクォートを気にせず安全）
+    $bin = file_get_contents($pkAbs);
+    if ($bin === false) { $skipped++; continue; }
+    //$hex = bin2hex($bin);
+	$hex = addslashes($bin);
+
+    $keySql = $escapeSqlString($key);
+
+    // html_path に UNIQUE を張っておけば、重複は更新に
+    $sql = sprintf(
+        "INSERT INTO %s (%s,%s) VALUES ('%s','%s') ON DUPLICATE KEY UPDATE %s=VALUES(%s);\n",
+        $TABLE, $COL_HTML, $COL_PK, $keySql, $hex, $COL_PK, $COL_PK
+    );
+    fwrite($fh, $sql);
+    $rows++;
+}
+
+fwrite($fh, "COMMIT;\n");
+fclose($fh);
+fclose($fp);
+
+echo "Wrote SQL: {$OUT_SQL}\n";
+echo "rows: {$rows}, skipped: {$skipped}\n";
+
