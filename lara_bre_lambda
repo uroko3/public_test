@@ -43,3 +43,26 @@ if ($path === '' || substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/'
 }
 $url = '/xxx/' . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
 echo @file_get_contents($url) ?: '';
+
+
+
+
+
+<?php
+const TIMEOUT_SEC = 2.0; // 必要に応じて変更
+
+$path = ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/', '/');
+if ($path === '' || substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/', $path)) {
+    $path = rtrim($path, '/') . '/index.html';
+}
+$url = '/xxx/' . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
+
+$ctx = stream_context_create([
+    'http' => [
+        'method'        => 'GET',
+        'timeout'       => TIMEOUT_SEC,
+        'ignore_errors' => true,
+    ],
+]);
+
+echo @file_get_contents($url, false, $ctx) ?: '';
