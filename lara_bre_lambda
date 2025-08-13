@@ -30,3 +30,16 @@ $html = @file_get_contents($url, false, $ctx);
 
 // 取得結果をそのまま出力（Lambda側で空文字なら空表示）
 echo $html !== false ? $html : '';
+
+
+
+
+
+
+<?php
+$path = ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/', '/');
+if ($path === '' || substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/', $path)) {
+    $path = rtrim($path, '/') . '/index.html';
+}
+$url = '/xxx/' . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
+echo @file_get_contents($url) ?: '';
