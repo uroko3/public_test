@@ -1,0 +1,32 @@
+<?php
+declare(strict_types=1);
+
+const LAMBDA_PREFIX = '/xxx/';
+const TIMEOUT_SEC   = 2.0;
+
+// basepath を決定（ベタ書き）
+$uri  = $_SERVER['REQUEST_URI'] ?? '/';
+$path = parse_url($uri, PHP_URL_PATH) ?? '/';
+$path = ltrim($path, '/');
+
+if ($path === '') {
+    $path = 'index.html';
+}
+if (substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/', $path)) {
+    $path = rtrim($path, '/') . '/index.html';
+}
+
+$url = LAMBDA_PREFIX . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
+
+$ctx = stream_context_create([
+    'http' => [
+        'method'        => 'GET',
+        'timeout'       => TIMEOUT_SEC,
+        'ignore_errors' => true,
+    ],
+]);
+
+$html = @file_get_contents($url, false, $ctx);
+
+// 取得結果をそのまま出力（Lambda側で空文字なら空表示）
+echo $html !== false ? $html : '';
