@@ -1,0 +1,116 @@
+#/bin/bash
+
+find /c/wk/find_test -type f -name '*.pzz' | while read pzz; do
+    html="${pzz%.pzz}.html"
+    if [ -f "$html" ]; then
+        echo "\"$html\",\"$pzz\""
+    fi
+done
+
+
+
+
+
+<?php
+/**
+ * CSVの各行: "HTMLの絶対パス","pzzの絶対パス"
+ *   → pzz本文（部分HTML）を読み込み、HEX(0x...)でINSERT文を生成
+ *   → insert_pzz_pairs.sql に書き出す
+ *
+ * 実行: php make_sql_from_csv.php
+ */
+
+mb_internal_encoding('UTF-8');
+
+// ===== 設定 =====
+$CSV         = __DIR__ . '/pzz.csv';       // 先に find で作ったCSV
+$OUT_SQL     = __DIR__ . '/insert_pzz_pairs.sql';
+
+$TABLE       = 'pzz_pairs';                      // テーブル名
+$COL_HTML    = 'html_path';                      // HTMLパス格納カラム
+$COL_pzz     = 'pzz_html';                       // pzz(本文)格納カラム
+
+// 相対パス化したい場合はここに基準を入れる（例: '/c/wk/find_test/html_sample_v6/'）。空なら絶対パスのまま。
+$BASE_STRIP  = '/c/wk/find_test/';
+// =================
+
+// パス用の最低限のエスケープ（SQL文字列リテラル用）
+$escapeSqlString = function (string $s): string {
+    $s = str_replace("\\", "\\\\", $s); // backslash → \\
+    $s = str_replace("'", "\\'", $s);   // single quote → \'
+    return $s;
+};
+
+if (!is_file($CSV)) {
+    fwrite(STDERR, "CSVが見つかりません: $CSV\n");
+    exit(1);
+}
+
+$fp = fopen($CSV, 'r');
+if (!$fp) {
+    fwrite(STDERR, "CSVを開けません: $CSV\n");
+    exit(2);
+}
+
+$fh = fopen($OUT_SQL, 'w');
+if (!$fh) {
+    fwrite(STDERR, "SQL出力ファイルを開けません: $OUT_SQL\n");
+    exit(3);
+}
+
+fwrite($fh, "-- auto-generated at " . date('c') . PHP_EOL);
+fwrite($fh, "SET NAMES utf8mb4;\n");
+fwrite($fh, "START TRANSACTION;\n");
+
+$rows = 0;
+$skipped = 0;
+
+while (($row = fgetcsv($fp)) !== false) {
+    // CSV: ["htmlAbs", "pzzAbs"]
+    if (count($row) < 2) { $skipped++; continue; }
+    $htmlAbs = trim($row[0]);
+    $pzzAbs  = trim($row[1]);
+    
+    $pzzAbs = preg_replace("/\/c\//", 'c:/', $pzzAbs);
+
+    echo "$htmlAbs\n";
+    echo "$pzzAbs\n";
+/*
+    if (!is_file($htmlAbs) || !is_file($pzzAbs)) {
+        $skipped++;
+        continue;
+    }
+ */
+    // 相対パスキー化（必要な場合のみ）
+    $key = $htmlAbs;
+    if ($BASE_STRIP !== '' && str_starts_with($key, $BASE_STRIP)) {
+        $key = substr($key, strlen($BASE_STRIP));
+    }
+
+    // pzzのオリジナルHTMLを読み込み → HEX(0x...) に変換（改行やクォートを気にせず安全）
+    $bin = file_get_contents($pzzAbs);
+    if ($bin === false) { $skipped++; continue; }
+    //$hex = bin2hex($bin);
+	$hex = addslashes($bin);
+
+    $keySql = $escapeSqlString($key);
+
+    // html_path に UNIQUE を張っておけば、重複は更新に
+    $sql = sprintf(
+        "INSERT INTO %s (%s,%s) VALUES ('%s','%s') ON DUPLICATE KEY UPDATE %s=VALUES(%s);\n",
+        $TABLE, $COL_HTML, $COL_pzz, $keySql, $hex, $COL_pzz, $COL_pzz
+    );
+    fwrite($fh, $sql);
+    $rows++;
+}
+
+fwrite($fh, "COMMIT;\n");
+fclose($fh);
+fclose($fp);
+
+echo "Wrote SQL: {$OUT_SQL}\n";
+echo "rows: {$rows}, skipped: {$skipped}\n";
+
+
+
+
