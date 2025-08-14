@@ -66,3 +66,23 @@ $ctx = stream_context_create([
 ]);
 
 echo @file_get_contents($url, false, $ctx) ?: '';
+
+
+
+ーーーーーーーーーーーーーーーーーー
+
+$html = @file_get_contents($url, false, $ctx);
+
+// HTTPステータスコードの取得
+$status = 0;
+if (isset($http_response_header[0]) &&
+    preg_match('#\s(\d{3})\s#', $http_response_header[0], $m)) {
+    $status = (int)$m[1];
+}
+
+// 200 の場合のみ出力
+if ($status === 200 && $html !== false) {
+    echo $html;
+} else {
+    echo '';
+}
