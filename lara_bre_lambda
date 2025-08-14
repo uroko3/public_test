@@ -86,3 +86,59 @@ if ($status === 200 && $html !== false) {
 } else {
     echo '';
 }
+
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+
+<?php
+declare(strict_types=1);
+
+const LAMBDA_PREFIX = '/xxx/';
+const TIMEOUT_SEC   = 2.0;
+
+// basepath を生成（ディレクトリは index.html 補完）
+$path = ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/', '/');
+if ($path === '' || substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/', $path)) {
+    $path = rtrim($path, '/') . '/index.html';
+}
+$url = LAMBDA_PREFIX . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
+
+// HTTP取得（タイムアウト & 本文は常に受け取る）
+$ctx = stream_context_create([
+    'http' => [
+        'method'        => 'GET',
+        'timeout'       => TIMEOUT_SEC,
+        'ignore_errors' => true,
+        'header'        => "Accept: application/json\r\nUser-Agent: xxx\r\n",
+    ],
+]);
+
+$body = @file_get_contents($url, false, $ctx);
+
+// ステータスとContent-Typeを取得
+$status = 0; $ctype = '';
+if (!empty($http_response_header[0]) && preg_match('#\s(\d{3})\s#', $http_response_header[0], $m)) {
+    $status = (int)$m[1];
+}
+foreach ($http_response_header ?? [] as $i => $line) {
+    if ($i === 0) continue;
+    $pos = strpos($line, ':');
+    if ($pos === false) continue;
+    $name = strtolower(trim(substr($line, 0, $pos)));
+    $val  = strtolower(trim(substr($line, $pos + 1)));
+    if ($name === 'content-type') { $ctype = $val; break; }
+}
+
+// 200 かつ JSON の場合のみパース
+if ($status === 200 && $body !== false && str_starts_with($ctype, 'application/json')) {
+    $json = json_decode($body, true, flags: JSON_BIGINT_AS_STRING);
+    if (is_array($json) && ($json['ok'] ?? false) === true && isset($json['html']) && is_string($json['html'])) {
+        echo $json['html']; // 安全にHTMLを差し込み（生成元はLambda）
+        return;
+    }
+}
+
+// それ以外は空
+echo '';
+
