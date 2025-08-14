@@ -142,3 +142,52 @@ if ($status === 200 && $body !== false && str_starts_with($ctype, 'application/j
 // それ以外は空
 echo '';
 
+
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+
+<?php
+declare(strict_types=1);
+
+const LAMBDA_PREFIX = '/xxx/';
+const TIMEOUT_SEC   = 2.0;
+const USER_AGENT    = 'xxx/curl'; // 任意のUser-Agent文字列
+
+// basepath を生成（ディレクトリは index.html 補完）
+$path = ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/', '/');
+if ($path === '' || substr($path, -1) === '/' || !preg_match('/\.[A-Za-z0-9]+$/', $path)) {
+    $path = rtrim($path, '/') . '/index.html';
+}
+$url = LAMBDA_PREFIX . preg_replace('~[^A-Za-z0-9/_\.\-]~', '', $path);
+
+// cURLでアクセス
+$ch = curl_init();
+curl_setopt_array($ch, [
+    CURLOPT_URL            => $url,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT        => TIMEOUT_SEC,
+    CURLOPT_HTTPHEADER     => [
+        'Accept: application/json',
+        'User-Agent: ' . USER_AGENT,
+    ],
+]);
+
+$body   = curl_exec($ch);
+$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$ctype  = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+$err    = curl_error($ch);
+curl_close($ch);
+
+// ステータス200 & Content-Typeがapplication/jsonの場合のみ判定
+if ($status === 200 && is_string($body) && stripos($ctype, 'application/json') === 0) {
+    $json = json_decode($body, true);
+    if (is_array($json) && ($json['ok'] ?? false) === true && isset($json['html']) && is_string($json['html'])) {
+        echo $json['html'];
+        return;
+    }
+}
+
+// それ以外は空表示
+echo '';
+
