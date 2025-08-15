@@ -13,3 +13,33 @@ COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
 SET UNIQUE_CHECKS = 1;
+
+
+
+ーーーーーーーーーーーーーーーーーー
+LAMBDA
+
+import mysql.connector
+
+conn = mysql.connector.connect(
+    host="your-proxy.proxy-xxxxxxxx.ap-northeast-1.rds.amazonaws.com",
+    user="DB_USER",
+    password="DB_PASS",
+    database="DB_NAME",
+    ssl_disabled=False  # RDS ProxyでSSL/TLSを有効にする場合は別途証明書設定
+)
+
+with conn:
+    cur = conn.cursor()
+
+    with open('init.sql', 'r', encoding='utf-8') as f:
+        sql_text = f.read()
+
+    # multi=True で複数文を一度に処理
+    for result in cur.execute(sql_text, multi=True):
+        # result には各ステートメントの実行結果が入る
+        # ここで print するとどの文が実行されたか確認可能
+        pass
+
+    conn.commit()
+    cur.close()
