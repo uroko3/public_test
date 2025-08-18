@@ -1,0 +1,11 @@
+オプション例
+
+--no-create-info → テーブル定義を含めずデータだけ出力する
+
+--skip-extended-insert → 1行1行ごとの INSERT にする（可読性が高い）
+
+--where="条件式" → 特定条件で絞り込み
+
+例：
+
+mysqldump -u ユーザ名 -p --no-create-info --skip-extended-insert データベース名 テーブル名 > data.sql
