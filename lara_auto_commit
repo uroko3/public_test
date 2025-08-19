@@ -1,0 +1,7 @@
+conn = mysql.connector.connect(
+    host="...",
+    user="...",
+    password="...",
+    database="...",
+    autocommit=True  # 普段はオートコミット
+)
