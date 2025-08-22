@@ -3,3 +3,11 @@ find /var/www/html -type f -name "*.html" \
     updated=$(date -d @"$(stat -c %Y "$file")" "+%Y-%m-%d %H:%M:%S"); \
     title=$(grep -oPim1 "(?<=<title>).*?(?=</title>)" "$file"); \
     echo "\"$file\",\"$updated\",\"$title\"" ' sh {} \;
+
+
+
+find /var/www/html -type f -name "*.html" \
+  -exec sh -c 'file="$1"; \
+    updated=$(date -d @"$(stat -c %Y "$file")" "+%Y-%m-%d %H:%M:%S"); \
+    title=$(grep -oPim1 "(?<=<title>).*?(?=</title>)" "$file"); \
+    echo -e "$file\t$updated\t$title"' sh {} \;
