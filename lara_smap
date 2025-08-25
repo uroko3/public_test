@@ -1,0 +1,65 @@
+public array $selected = []; // チェックされたID
+public array $pageIds = [];  // このページの全ID（hiddenで渡す）
+public int $perPage = 50;
+
+public function save(): void
+{
+    $pageIds = array_map('intval', $this->pageIds);
+    if (!$pageIds) {
+        session()->flash('ok', '対象がありません。');
+        return;
+    }
+
+    DB::transaction(function () use ($pageIds) {
+        // 1) 今ページ分を行ロックして取得（主キーでの IN 指定なので最小限のレコードロック）
+        $rows = DB::table('sitemaps')
+            ->whereIn('id', $pageIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get(['id', 'status']);
+
+        // 2) 差分だけ更新
+        $selectedSet = array_flip($this->selected);
+        $toOn  = [];
+        $toOff = [];
+
+        foreach ($rows as $r) {
+            $want = isset($selectedSet[$r->id]) ? 3 : 0;
+            if ((int)$r->status !== $want) {
+                if ($want === 3) $toOn[] = $r->id; else $toOff[] = $r->id;
+            }
+        }
+
+        if ($toOn) {
+            DB::table('sitemaps')
+              ->whereIn('id', $toOn)
+              ->where('status', '!=', 3)
+              ->update(['status' => 3]);
+        }
+        if ($toOff) {
+            DB::table('sitemaps')
+              ->whereIn('id', $toOff)
+              ->where('status', '!=', 0)
+              ->update(['status' => 0]);
+        }
+    });
+
+    session()->flash('ok', 'このページの変更を保存しました。');
+}
+
+
+------------------
+
+
+@foreach ($rows as $row)
+<tr wire:key="sitemap-{{ $row->id }}">
+  <td>
+    <input type="checkbox" value="{{ $row->id }}" wire:model.defer="selected">
+    <input type="hidden" value="{{ $row->id }}" wire:model.defer="pageIds">
+  </td>
+  <td>{{ $row->id }}</td>
+  <td class="font-mono">{{ $row->page_url }}</td>
+  <td>{{ $row->modified_at }}</td>
+  <td>{{ in_array($row->id, $selected, true) ? 3 : 0 }}</td>
+</tr>
+@endforeach
