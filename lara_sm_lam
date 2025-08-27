@@ -1,0 +1,87 @@
+
+import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+
+from Database import Database
+
+# ===== 設定 =====
+TABLE_NAME = os.getenv("TABLE_NAME", "sitemap")
+TZ_NAME = os.getenv("TZ_NAME", "Asia/Tokyo")
+CACHE_CONTROL = os.getenv("CACHE_CONTROL", "max-age=300")
+# ================
+
+JST = ZoneInfo(TZ_NAME)
+
+
+def _to_lastmod(dt: datetime | None) -> str | None:
+    """DATETIME を JST で ISO8601 に変換。NULL は None を返す。"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=JST)
+    return dt.isoformat(timespec="seconds")
+
+
+def _build_sitemap(rows: list[dict]) -> bytes:
+    """
+    rows: [{'page_url': '...', 'modified_at': datetime or None}, ...]
+    """
+    urlset = ET.Element("urlset", {
+        "xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9",
+    })
+
+    for row in rows:
+        page_url = row.get("page_url")
+        if not page_url:
+            continue
+
+        url_el = ET.SubElement(urlset, "url")
+        loc_el = ET.SubElement(url_el, "loc")
+        loc_el.text = page_url
+
+        lastmod_str = _to_lastmod(row.get("modified_at"))
+        if lastmod_str:
+            lastmod_el = ET.SubElement(url_el, "lastmod")
+            lastmod_el.text = lastmod_str
+
+    # ElementTree → minidom で pretty print に変換
+    rough_string = ET.tostring(urlset, encoding="utf-8", xml_declaration=True)
+    dom = minidom.parseString(rough_string)
+    pretty = dom.toprettyxml(indent="  ", encoding="utf-8")
+    return pretty
+
+
+def lambda_handler(event, context):
+    try:
+        db = Database()
+        rows = db.execute(
+            f"SELECT page_url, modified_at FROM {TABLE_NAME} ORDER BY page_url"
+        )
+
+        xml_bytes = _build_sitemap(rows)
+
+        headers = {
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": CACHE_CONTROL,
+            "Content-Length": str(len(xml_bytes)),
+        }
+
+        return {
+            "statusCode": 200,
+            "statusDescription": "200 OK",
+            "isBase64Encoded": False,
+            "headers": headers,
+            "body": xml_bytes.decode("utf-8"),
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "statusDescription": "500 Internal Server Error",
+            "isBase64Encoded": False,
+            "headers": {"Content-Type": "text/plain; charset=utf-8"},
+            "body": f"Internal Server Error: {e}",
+        }
