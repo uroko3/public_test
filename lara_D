@@ -1,0 +1,97 @@
+<?php
+$input = <<<EOT
+xxx
+M\tindex.html
+A\ta/index.html
+A\ta/b/index.html
+xxx/hoge
+M\tindex.html
+xxx/hoge2
+A\ta/index.html 
+M\tb/hoge.html 
+EOT;
+
+$lines = preg_split("/\r\n|\r|\n/", $input);
+$output = [];
+
+$currentSubprefix = ''; // 'xxx' の後ろ（例: '', 'hoge', 'hoge2'）
+
+foreach ($lines as $raw) {
+    $line = rtrim($raw);
+    if ($line === '') continue;
+
+    // ヘッダー行（xxx または xxx/xxx...）
+    if (strpos($line, 'xxx') === 0) {
+        // 'xxx' を外したサブパスを保持（先頭の '/' は削除）
+        $rest = substr($line, 3);               // 先頭 'xxx' を除去
+        $rest = ltrim($rest, "/");              // 先頭の '/' を除去
+        $currentSubprefix = $rest;              // 例: '', 'hoge', 'hoge2'
+        continue;
+    }
+
+    // 変更行（例: "M\tindex.html"）
+    if (!preg_match('/^[A-Z]\t/', $line)) {
+        // 想定外の行はスキップ（必要ならそのまま出力などに変更可）
+        continue;
+    }
+
+    // ステータスとパスに分割
+    [$status, $path] = explode("\t", $line, 2);
+
+    // 先頭のスラッシュは除去して正規化
+    $path = ltrim($path, "/");
+
+    // サブプリフィクス（xxx 以降）があれば付加
+    $prefix = ($currentSubprefix !== '') ? ($currentSubprefix . '/') : '';
+
+    $output[] = $status . "\t" . $prefix . $path;
+}
+
+echo implode("\n", $output) . "\n";
+
+
+<?php
+$input = <<<EOT
+M\tindex.html
+A\ta/index.html
+A\ta/b/index.html
+M\thoge/index.html
+D hoge2/a/index.html
+
+A\thoge2/a/index.html
+M\thoge2/b/hoge.html
+EOT;
+
+$lines = preg_split('/\R/', $input);
+$ret = [];
+$firstStatusByPath = [];   // パスごとの最初のステータスを記録
+$excludedPaths = [];       // 最初のステータスが D のパス集合
+
+foreach ($lines as $raw) {
+    $line = trim($raw);
+    if ($line === '') continue;
+
+    // 先頭1文字のステータス + 区切り（タブ/スペース）+ パス
+    if (!preg_match('/^([A-Z])\s+(.+)$/', $line, $m)) continue;
+
+    $status = $m[1];
+    $path   = $m[2];
+
+    // そのパスで初登場のステータスを記録
+    if (!isset($firstStatusByPath[$path])) {
+        $firstStatusByPath[$path] = $status;
+        if ($status === 'D') {
+            $excludedPaths[$path] = true; // 最初がDなら以降すべて除外
+        }
+    }
+
+    // A/M のみ配列対象、かつ「最初がDのパス」は除外
+    if (($status === 'A' || $status === 'M') && !isset($excludedPaths[$path])) {
+        $ret[] = $path;
+    }
+}
+
+// デバッグ出力（指定の形式で）
+foreach ($ret as $i => $p) {
+    echo "\$ret[$i] = '$p';\n";
+}
