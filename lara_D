@@ -1,3 +1,11 @@
+--diff-filter=AMDR
+
+R 行は R100\told/path.html\tnew/path.html のように表示されます。
+
+git log --since="2025-09-02 00:00" --until="2025-09-02 23:59:59" \
+  --name-only --pretty=format: --diff-filter=AMDR -- "*.html"
+
+
 <?php
 $input = <<<EOT
 xxx
