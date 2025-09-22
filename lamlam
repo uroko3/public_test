@@ -1,0 +1,54 @@
+import mysql.connector
+from mysql.connector import Error
+from pathlib import Path
+
+def load_sql() -> str:
+    sql_path = Path(__file__).with_name("test.sql")
+    return sql_path.read_text(encoding="utf-8")
+
+def lambda_handler(event, context):
+    connection = None
+    try:
+        sql = load_sql()
+        print("Loaded SQL:\n", sql)
+
+        connection = mysql.connector.connect(
+            host='',
+            user='',
+            password='',
+            database='test',
+        )
+
+        if connection.is_connected():
+            cursor = connection.cursor()
+
+            delete = "drop table pkz_pairs"
+            cursor.execute(delete)
+            create = "create table pkz_pairs (html_path varchar(191) primary key,pkz_html text)"
+            cursor.execute(create)
+
+            # test.sql の複数ステートメントを順に実行
+            for stmt in sql.split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    cursor.execute(stmt)
+
+            connection.commit()  # UPDATE を確定
+
+            cursor.execute("SELECT NOW();")
+            result = cursor.fetchone()
+
+            return {
+                'statusCode': 200,
+                'body': f"Current time from DB: {result[0]}"
+            }
+
+    except Error as e:
+        return {
+            'statusCode': 500,
+            'body': f"Database error: {str(e)}"
+        }
+
+    finally:
+        if connection and connection.is_connected():
+            connection.close()
