@@ -1,0 +1,1 @@
+msiexec /a AWSCLIV2.msi /qb TARGETDIR=C:\Users\<YourUser>\awscli
