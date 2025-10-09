@@ -1,0 +1,9 @@
+curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" -w "@curl-format.txt" -o /dev/null -s https://example.com
+
+----
+time_namelookup:  %{time_namelookup}s\n
+time_connect:     %{time_connect}s\n
+time_pretransfer: %{time_pretransfer}s\n
+time_starttransfer:%{time_starttransfer}s\n
+total_time:       %{time_total}s\n
+----
