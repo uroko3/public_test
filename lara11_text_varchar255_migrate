@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        if (!Schema::hasTable('test') || !Schema::hasColumn('test', 'code_text')) {
+            return;
+        }
+
+        // NULL & COMMENT を明示して維持する
+        DB::statement(
+            "ALTER TABLE `test`
+             MODIFY `code_text` VARCHAR(255) NULL COMMENT 'まずはテキスト'"
+        );
+
+        // UNIQUE（NULL は複数許容される点はMySQL仕様）
+        DB::statement(
+            "ALTER TABLE `test`
+             ADD UNIQUE `uniq_test_code_text` (`code_text`)"
+        );
+    }
+
+    public function down(): void
+    {
+        if (!Schema::hasTable('test') || !Schema::hasColumn('test', 'code_text')) {
+            return;
+        }
+
+        DB::statement("ALTER TABLE `test` DROP INDEX `uniq_test_code_text`");
+
+        // 戻すときも NULL & COMMENT を明示して維持する
+        DB::statement(
+            "ALTER TABLE `test`
+             MODIFY `code_text` TEXT NULL COMMENT 'まずはテキスト'"
+        );
+    }
+};
