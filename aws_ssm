@@ -1,0 +1,21 @@
+aws --profile xxx ssm start-session ^
+  --target i-xxxxxxxxxxxxxxxx ^
+  --document-name AWS-StartPortForwardingSession ^
+  --parameters "localPortNumber=2222,portNumber=22"
+  
+---------------------------------------------------------------
+  
+@echo off
+set SSH_USER=user
+set SSH_HOST=127.0.0.1
+set SSH_PORT=2222
+
+set LOCAL_PORT=13306
+set DB_HOST=xxxxxxxxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com
+set DB_PORT=3306
+
+echo Forwarding localhost:%LOCAL_PORT% -> %DB_HOST%:%DB_PORT% via SSH(%SSH_HOST%:%SSH_PORT%)
+echo Press Ctrl+C to stop.
+echo.
+
+ssh -p %SSH_PORT% -N -L %LOCAL_PORT%:%DB_HOST%:%DB_PORT% %SSH_USER%@%SSH_HOST%
