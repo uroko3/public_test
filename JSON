@@ -1,0 +1,42 @@
+<?php
+
+$csv = <<<CSV
+id,attr1,attr2,attr3
+1,data1,data2,data3
+2,,data2,data3
+3,data1,,
+,foo,bar,baz
+CSV;
+
+$lines = preg_split("/\r\n|\n|\r/", trim($csv));
+$headers = str_getcsv(array_shift($lines));
+
+$result = [];
+
+foreach ($lines as $line) {
+    if (trim($line) === '') continue;
+
+    $values = str_getcsv($line);
+
+    // 列数不足対策
+    $values = array_pad($values, count($headers), '');
+
+    $row = array_combine($headers, $values);
+
+    // 空値のキーをすべて削除（id も含む）
+    foreach ($row as $k => $v) {
+        if (trim((string)$v) === '') {
+            unset($row[$k]);
+        }
+    }
+
+    // 行まるごと空になった場合はスキップしたいなら↓
+    if (!empty($row)) {
+        $result[] = $row;
+    }
+}
+
+echo json_encode(
+    $result,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+);
