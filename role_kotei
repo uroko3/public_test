@@ -1,0 +1,12 @@
+use Aws\Credentials\CredentialProvider;
+use Aws\DynamoDb\DynamoDbClient;
+
+$provider = CredentialProvider::memoize(
+    CredentialProvider::instanceProfile()
+);
+
+$client = new DynamoDbClient([
+    'version' => 'latest',
+    'region'  => 'ap-northeast-1',
+    'credentials' => $provider,
+]);
